@@ -40,7 +40,7 @@ jobs:
         working-directory: frontend
 
       - name: Build Angular app
-        run: npm run build -- --base-href /angular-chat-25-dotnet/
+        run: npm run build -- --base-href /angular-chat-25-dotnet/ --output-path dist/github-pages
         working-directory: frontend
 
       - name: List build output
@@ -52,7 +52,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: frontend/dist/frontend
+          path: frontend/dist/github-pages/browser
 
   deploy:
     environment:
