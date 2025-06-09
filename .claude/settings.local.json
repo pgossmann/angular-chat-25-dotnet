@@ -16,7 +16,11 @@
       "Bash(timeout:*)",
       "Bash(pkill:*)",
       "WebFetch(domain:angular.dev)",
-      "Bash(dotnet clean:*)"
+      "Bash(dotnet clean:*)",
+      "Bash(npm test:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }
