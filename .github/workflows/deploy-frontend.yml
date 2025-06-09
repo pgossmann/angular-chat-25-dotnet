@@ -24,10 +24,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Remove cached Node.js
+        run: sudo rm -rf /opt/hostedtoolcache/node/
+        
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.12'
+          node-version: '22.12.0'
           
       - name: Verify Node.js version
         run: node --version
