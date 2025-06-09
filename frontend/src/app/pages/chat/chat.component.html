@@ -1,0 +1,155 @@
+<div class="container-fluid h-100">
+  <!-- Header -->
+  <div class="row bg-primary text-white py-3">
+    <div class="col">
+      <div class="d-flex justify-content-between align-items-center">
+        <h1 class="h3 mb-0">💬 Chat Playground</h1>
+        <a routerLink="/" class="btn btn-outline-light btn-sm">← Back to Home</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="row" style="height: calc(100vh - 80px);">
+    <!-- Left Panel: System Prompt & Context -->
+    <div class="col-md-4 bg-light border-end d-flex flex-column">
+      <div class="p-3 flex-grow-1">
+        <!-- System Prompt Section -->
+        <div class="mb-4">
+          <label for="systemPrompt" class="form-label fw-bold">
+            System Prompt 
+            <span class="badge" [class]="isSystemPromptValid ? 'bg-success' : 'bg-danger'">
+              {{ systemPromptLength }}/{{ MAX_SYSTEM_PROMPT_LENGTH }}
+            </span>
+          </label>
+          <textarea
+            id="systemPrompt"
+            [(ngModel)]="systemPrompt"
+            [maxlength]="MAX_SYSTEM_PROMPT_LENGTH"
+            class="form-control"
+            [class.is-invalid]="!isSystemPromptValid"
+            placeholder="Enter system prompt here... (e.g., 'You are a helpful AI assistant.')"
+            rows="4">
+          </textarea>
+          @if (!isSystemPromptValid) {
+            <div class="invalid-feedback">System prompt exceeds maximum length!</div>
+          }
+        </div>
+
+        <!-- Context Information Section -->
+        <div class="mb-4 flex-grow-1 d-flex flex-column">
+          <label for="contextInfo" class="form-label fw-bold">
+            Context Information
+            <span class="badge bg-info">{{ contextInfo().length }} chars</span>
+          </label>
+          <textarea
+            id="contextInfo"
+            [(ngModel)]="contextInfo"
+            class="form-control flex-grow-1"
+            placeholder="Enter any context information here... (unlimited length)"
+            style="min-height: 200px; resize: vertical;">
+          </textarea>
+        </div>
+      </div>
+
+      <!-- Controls Section -->
+      <div class="p-3 border-top">
+        <button 
+          (click)="clearChat()" 
+          class="btn btn-outline-danger w-100" 
+          [disabled]="messages().length === 0">
+          🗑️ Clear Chat History
+        </button>
+      </div>
+    </div>
+
+    <!-- Right Panel: Chat Interface -->
+    <div class="col-md-8 d-flex flex-column p-0">
+      <!-- Chat Messages -->
+      <div class="flex-grow-1 overflow-auto p-3" #messagesContainer>
+        @if (messages().length === 0) {
+          <div class="text-center text-muted py-5">
+            <div class="mb-3">
+              <i class="h1">💬</i>
+            </div>
+            <h5>Start a conversation!</h5>
+            <p>Type your message below and press Enter or click Send.</p>
+          </div>
+        }
+        
+        @for (message of messages(); track message.id) {
+          <div class="mb-3">
+            <div class="d-flex" [class]="message.role === 'user' ? 'justify-content-end' : 'justify-content-start'">
+              <div class="message-bubble" [class]="message.role">
+                <div class="message-header mb-2">
+                  <small class="text-muted">
+                    <strong>{{ message.role === 'user' ? '👤 You' : '🤖 Assistant' }}</strong>
+                    <span class="ms-2">{{ message.timestamp | date:'short' }}</span>
+                  </small>
+                </div>
+                <div class="message-content">
+                  @if (message.role === 'user') {
+                    <div class="user-message">{{ message.content }}</div>
+                  } @else {
+                    <div class="assistant-message" [innerHTML]="message.htmlContent"></div>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (isStreaming()) {
+          <div class="mb-3">
+            <div class="d-flex justify-content-start">
+              <div class="message-bubble assistant">
+                <div class="message-header mb-2">
+                  <small class="text-muted">
+                    <strong>🤖 Assistant</strong>
+                    <span class="ms-2">{{ getCurrentTime() | date:'short' }}</span>
+                  </small>
+                </div>
+                <div class="message-content">
+                  <div class="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Chat Input -->
+      <div class="border-top p-3">
+        <div class="input-group">
+          <textarea
+            [(ngModel)]="currentMessage"
+            (keypress)="onKeyPress($event)"
+            class="form-control"
+            placeholder="Type your message here... (Press Enter to send, Shift+Enter for new line)"
+            rows="2"
+            [disabled]="isStreaming()"
+            style="resize: none;">
+          </textarea>
+          <button 
+            (click)="sendMessage()" 
+            [disabled]="!currentMessage().trim() || isStreaming()"
+            class="btn btn-primary"
+            style="width: 80px;">
+            @if (isStreaming()) {
+              <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            } @else {
+              Send
+            }
+          </button>
+        </div>
+        <small class="text-muted">Press Enter to send • Shift+Enter for new line</small>
+      </div>
+    </div>
+  </div>
+</div>

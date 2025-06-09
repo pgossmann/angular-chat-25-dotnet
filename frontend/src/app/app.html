@@ -1,0 +1,51 @@
+<div class="container">
+  <header>
+    <h1>{{ title }}</h1>
+    <p>Full-Stack Chat Application - Frontend & Backend Test</p>
+  </header>
+
+  <main>
+    <div class="test-section">
+      <h2>Backend Connection Test</h2>
+      <p>Click the button below to test the connection to the ASP.NET Core backend:</p>
+      
+      <button 
+        (click)="callBackend()" 
+        [disabled]="loading()"
+        class="test-button">
+        @if (loading()) {
+          Testing...
+        } @else {
+          Test Backend Connection
+        }
+      </button>
+
+      @if (backendResponse()) {
+        <div class="success">
+          <h3>✅ Success!</h3>
+          <p><strong>Backend Response:</strong></p>
+          <code>{{ backendResponse() }}</code>
+        </div>
+      }
+
+      @if (error()) {
+        <div class="error">
+          <h3>❌ Error</h3>
+          <p>{{ error() }}</p>
+          <small>Make sure the backend is running on http://localhost:5000</small>
+        </div>
+      }
+    </div>
+
+    <div class="info-section">
+      <h2>Next Steps</h2>
+      <ul>
+        <li>✅ Angular 20 frontend is running</li>
+        <li>🔄 Test backend connection above</li>
+        <li>🚀 Ready for chat functionality</li>
+      </ul>
+    </div>
+  </main>
+</div>
+
+<router-outlet />
