@@ -1,6 +1,6 @@
 <div class="container-fluid h-100">
   <!-- Header -->
-  <div class="row bg-primary text-white py-3">
+  <div class="row text-white py-3" style="background-color: #4dabf7;">
     <div class="col">
       <div class="d-flex justify-content-between align-items-center">
         <h1 class="h3 mb-0">💬 Chat Playground</h1>
@@ -14,6 +14,61 @@
     <!-- Left Panel: System Prompt & Context -->
     <div class="col-md-4 bg-light border-end d-flex flex-column">
       <div class="p-3 flex-grow-1">
+        <!-- Context Caching Toggle -->
+        <div class="mb-4">
+          <div class="form-check form-switch">
+            <input 
+              class="form-check-input" 
+              type="checkbox" 
+              id="useCaching" 
+              [checked]="useCaching()" 
+              (change)="toggleCaching()">
+            <label class="form-check-label fw-bold" for="useCaching">
+              🚀 Use Context Caching
+            </label>
+          </div>
+          <small class="text-muted">
+            Enable for large documents and efficient token usage
+          </small>
+        </div>
+
+        <!-- Conversations List (only when caching is enabled) -->
+        @if (useCaching()) {
+          <div class="mb-4">
+            <label class="form-label fw-bold">Active Conversations</label>
+            <div class="conversation-list" style="max-height: 150px; overflow-y: auto;">
+              @if (conversations().length === 0) {
+                <p class="text-muted small">No conversations yet</p>
+              } @else {
+                @for (conversation of conversations(); track conversation.id) {
+                  <div class="conversation-item p-2 mb-2 border rounded" 
+                       [class.bg-primary]="currentConversationId() === conversation.id"
+                       [class.text-white]="currentConversationId() === conversation.id"
+                       style="cursor: pointer;">
+                    <div class="d-flex justify-content-between align-items-start">
+                      <div (click)="selectConversation(conversation.id)" class="flex-grow-1">
+                        <small class="fw-bold">
+                          {{ conversation.documentName || 'Text Context' }}
+                        </small>
+                        <br>
+                        <small class="text-muted" [class.text-light]="currentConversationId() === conversation.id">
+                          {{ conversation.messageCount }} messages • {{ conversation.createdAt | date:'short' }}
+                        </small>
+                      </div>
+                      <button 
+                        class="btn btn-sm btn-outline-danger ms-2" 
+                        (click)="deleteConversation(conversation.id)"
+                        title="Delete conversation">
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        }
+
         <!-- System Prompt Section -->
         <div class="mb-4">
           <label for="systemPrompt" class="form-label fw-bold">
@@ -29,7 +84,7 @@
             class="form-control"
             [class.is-invalid]="!isSystemPromptValid"
             placeholder="Enter system prompt here... (e.g., 'You are a helpful AI assistant.')"
-            rows="4">
+            rows="3">
           </textarea>
           @if (!isSystemPromptValid) {
             <div class="invalid-feedback">System prompt exceeds maximum length!</div>
@@ -41,24 +96,90 @@
           <label for="contextInfo" class="form-label fw-bold">
             Context Information
             <span class="badge bg-info">{{ contextInfo().length }} chars</span>
+            @if (useCaching() && !selectedFile()) {
+              <span class="badge bg-warning text-dark">Required</span>
+            } @else if (useCaching() && selectedFile()) {
+              <span class="badge bg-success">Optional with file</span>
+            }
           </label>
           <textarea
             id="contextInfo"
             [(ngModel)]="contextInfo"
             class="form-control flex-grow-1"
-            placeholder="Enter any context information here... (unlimited length)"
-            style="min-height: 200px; resize: vertical;">
+            [placeholder]="useCaching() ? (selectedFile() ? 'Additional context for the uploaded file... (optional)' : 'Enter context information here... (required if no file uploaded)') : 'Enter any context information here... (optional)'"
+            style="min-height: 150px; resize: vertical;">
           </textarea>
         </div>
+
+        <!-- File Upload Section (only when caching is enabled) -->
+        @if (useCaching()) {
+          <div class="mb-4">
+            <label for="fileInput" class="form-label fw-bold">
+              📄 Upload Document
+            </label>
+            <input 
+              type="file" 
+              id="fileInput" 
+              class="form-control" 
+              accept=".pdf,.txt,.md"
+              (change)="onFileSelected($event)">
+            <small class="text-muted">
+              Supports PDF, TXT, MD files (max {{ MAX_FILE_SIZE / 1024 / 1024 }}MB)
+            </small>
+            
+            @if (selectedFile()) {
+              <div class="mt-2 p-2 bg-white border rounded">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <small class="fw-bold">{{ selectedFile()!.name }}</small>
+                    <br>
+                    <small class="text-muted">{{ fileSize }}</small>
+                  </div>
+                  <button 
+                    class="btn btn-sm btn-outline-danger" 
+                    (click)="removeFile()"
+                    title="Remove file">
+                    ×
+                  </button>
+                </div>
+                @if (!isFileValid) {
+                  <div class="text-danger small mt-1">
+                    Invalid file: Check size and type requirements
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
       </div>
 
       <!-- Controls Section -->
       <div class="p-3 border-top">
+        @if (useCaching()) {
+          <div class="mb-2">
+            @if (currentConversationId()) {
+              <div class="alert alert-success py-2">
+                <small>
+                  <strong>✅ Conversation Active</strong><br>
+                  Context cached and ready for efficient messaging
+                </small>
+              </div>
+            } @else {
+              <div class="alert alert-info py-2">
+                <small>
+                  <strong>ℹ️ Caching Mode</strong><br>
+                  Add context/file and send first message to initialize
+                </small>
+              </div>
+            }
+          </div>
+        }
+        
         <button 
           (click)="clearChat()" 
           class="btn btn-outline-danger w-100" 
           [disabled]="messages().length === 0">
-          🗑️ Clear Chat History
+          🗑️ Clear Chat {{ useCaching() ? 'Conversation' : 'History' }}
         </button>
       </div>
     </div>
@@ -136,15 +257,19 @@
           </textarea>
           <button 
             (click)="sendMessage()" 
-            [disabled]="!currentMessage().trim() || isStreaming()"
-            class="btn btn-primary"
-            style="width: 80px;">
+            [disabled]="!currentMessage().trim() || isStreaming() || !canStartChat"
+            class="btn"
+            style="width: 80px; background-color: #4dabf7; border-color: #4dabf7; color: white;">
             @if (isStreaming()) {
               <div class="spinner-border spinner-border-sm" role="status">
                 <span class="visually-hidden">Loading...</span>
               </div>
             } @else {
-              Send
+              @if (useCaching() && !isInitialized()) {
+                Start
+              } @else {
+                Send
+              }
             }
           </button>
         </div>

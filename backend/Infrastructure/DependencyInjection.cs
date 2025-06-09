@@ -19,6 +19,7 @@ public static class DependencyInjection
 
         // Register Chat Services
         services.AddScoped<IChatService, ChatService>();
+        services.AddScoped<IConversationService, ConversationService>();
 
         // Register Health Services
         services.AddScoped<IHealthService, HealthService>();

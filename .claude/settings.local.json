@@ -15,7 +15,8 @@
       "Bash(cp:*)",
       "Bash(timeout:*)",
       "Bash(pkill:*)",
-      "WebFetch(domain:angular.dev)"
+      "WebFetch(domain:angular.dev)",
+      "Bash(dotnet clean:*)"
     ],
     "deny": []
   }
