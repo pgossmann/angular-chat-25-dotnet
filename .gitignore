@@ -353,3 +353,5 @@ ASALocalRun/
 
 # Local History for Visual Studio
 .localhistory/
+backend/appsettings.Development.json
+backend/appsettings.Development.json

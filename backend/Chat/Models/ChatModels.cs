@@ -23,7 +23,7 @@ public class ChatSettings
 {
     public double Temperature { get; set; } = 0.7;
     public int MaxTokens { get; set; } = 1000;
-    public string Model { get; set; } = "gemini-1.5-flash";
+    public string Model { get; set; } = "gemini-2.5-flash-preview-05-20";
     public string Provider { get; set; } = "Gemini";
 }
 

@@ -17,6 +17,13 @@ interface ChatMessage {
 interface ChatRequest {
   message: string;
   history: ChatMessage[];
+  systemPrompt?: string;
+  context?: string;
+  settings?: {
+    temperature: number;
+    maxTokens: number;
+    model: string;
+  };
 }
 
 interface ChatResponse {
@@ -92,23 +99,106 @@ export class ChatComponent {
     // Prepare request
     const request: ChatRequest = {
       message,
-      history: this.messages()
+      history: this.messages(),
+      systemPrompt: this.systemPrompt(),
+      context: this.contextInfo(),
+      settings: {
+        temperature: 0.7,
+        maxTokens: 1000,
+        model: "gemini-2.0-flash"
+      }
     };
 
     this.isStreaming.set(true);
 
     try {
-      // For now, use the regular endpoint - we'll implement streaming later
-      const response = await this.http.post<ChatResponse>('http://localhost:5000/api/chat/send', request).toPromise();
-      
-      if (response?.message) {
-        this.addMessage(response.message, 'assistant');
-      }
+      await this.streamMessage(request);
     } catch (error) {
       console.error('Chat error:', error);
       this.addMessage('Sorry, there was an error processing your message.', 'assistant');
     } finally {
       this.isStreaming.set(false);
+    }
+  }
+
+  private async streamMessage(request: ChatRequest) {
+    // Create a placeholder message for streaming
+    const assistantMessage = this.addMessage('', 'assistant');
+    let fullContent = '';
+
+    try {
+      const response = await fetch('http://localhost:5000/api/chat/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.substring(6);
+              
+              if (data === '[DONE]') {
+                return; // Stream completed
+              }
+
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.Content && !parsed.IsComplete) {
+                  fullContent += parsed.Content;
+                  
+                  // Update both content and htmlContent in a single signal update
+                  const htmlContent = marked(fullContent) as string;
+                  this.messages.update(messages => 
+                    messages.map(msg => 
+                      msg.id === assistantMessage.id 
+                        ? { 
+                            ...msg, 
+                            content: fullContent,
+                            htmlContent: this.sanitizer.bypassSecurityTrustHtml(htmlContent)
+                          }
+                        : msg
+                    )
+                  );
+                }
+              } catch (e) {
+                console.warn('Failed to parse streaming data:', data, e);
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Streaming error:', error);
+      // Update the message with error content
+      const errorHtml = marked('Sorry, there was an error processing your message.') as string;
+      this.messages.update(messages => 
+        messages.map(msg => 
+          msg.id === assistantMessage.id 
+            ? { 
+                ...msg, 
+                content: 'Sorry, there was an error processing your message.',
+                htmlContent: this.sanitizer.bypassSecurityTrustHtml(errorHtml)
+              }
+            : msg
+        )
+      );
     }
   }
 

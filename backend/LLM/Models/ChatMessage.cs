@@ -29,7 +29,7 @@ public class LlmSettings
 {
     public double Temperature { get; set; } = 0.7;
     public int MaxTokens { get; set; } = 1000;
-    public string Model { get; set; } = "gemini-pro";
+    public string Model { get; set; } = "gemini-2.5-flash-preview-05-20";
 }
 
 public class LlmUsage

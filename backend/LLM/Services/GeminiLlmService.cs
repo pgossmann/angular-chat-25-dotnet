@@ -14,7 +14,7 @@ public class GeminiLlmService : ILlmService
     private const string BaseUrl = "https://generativelanguage.googleapis.com/v1beta/models";
     
     public string ProviderName => "Gemini";
-    public IEnumerable<string> SupportedModels => new[] { "gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro" };
+    public IEnumerable<string> SupportedModels => new[] { "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash-preview-05-20", "gemini-2.5-pro-preview-06-05" };
 
     public GeminiLlmService(HttpClient httpClient, ILogger<GeminiLlmService> logger, IConfiguration configuration)
     {
@@ -60,7 +60,7 @@ public class GeminiLlmService : ILlmService
         var json = JsonSerializer.Serialize(geminiRequest);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        var url = $"{BaseUrl}/{request.Settings.Model}:streamGenerateContent?key={_apiKey}";
+        var url = $"{BaseUrl}/{request.Settings.Model}:streamGenerateContent?alt=sse&key={_apiKey}";
         
         using var httpRequest = new HttpRequestMessage(HttpMethod.Post, url)
         {
@@ -97,11 +97,17 @@ public class GeminiLlmService : ILlmService
             {
                 if (string.IsNullOrWhiteSpace(line)) continue;
                 
-                // Gemini returns JSON objects separated by newlines
-                var text = TryParseGeminiLine(line);
-                if (!string.IsNullOrEmpty(text))
+                // Handle Server-Sent Events format: "data: {json}"
+                if (line.StartsWith("data: "))
                 {
-                    yield return text;
+                    var jsonData = line.Substring(6); // Remove "data: " prefix
+                    if (jsonData == "[DONE]") break;
+                    
+                    var text = TryParseGeminiJsonObject(jsonData);
+                    if (!string.IsNullOrEmpty(text))
+                    {
+                        yield return text;
+                    }
                 }
             }
         }
@@ -114,7 +120,7 @@ public class GeminiLlmService : ILlmService
             var testRequest = new LlmRequest
             {
                 UserMessage = "Hello",
-                Settings = new LlmSettings { MaxTokens = 10 }
+                Settings = new LlmSettings { MaxTokens = 10, Model = "gemini-2.0-flash" }
             };
 
             await GetCompletionAsync(testRequest, cancellationToken);
@@ -123,6 +129,20 @@ public class GeminiLlmService : ILlmService
         catch
         {
             return false;
+        }
+    }
+
+    private string? TryParseGeminiJsonObject(string jsonContent)
+    {
+        try
+        {
+            var streamResponse = JsonSerializer.Deserialize<GeminiStreamResponse>(jsonContent);
+            return streamResponse?.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Failed to parse streaming JSON object: {Json}", jsonContent.Length > 100 ? jsonContent[..100] + "..." : jsonContent);
+            return null;
         }
     }
 

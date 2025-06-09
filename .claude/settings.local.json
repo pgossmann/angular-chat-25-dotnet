@@ -13,7 +13,9 @@
       "Bash(find:*)",
       "Bash(ls:*)",
       "Bash(cp:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(pkill:*)",
+      "WebFetch(domain:angular.dev)"
     ],
     "deny": []
   }
