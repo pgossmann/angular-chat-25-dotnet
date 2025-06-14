@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { marked } from 'marked';
+import { ApiService } from '../../services/api.service';
 
 interface ChatMessage {
   id: string;
@@ -79,6 +80,7 @@ interface ConversationListItem {
 export class ChatComponent {
   private http = inject(HttpClient);
   private sanitizer = inject(DomSanitizer);
+  private apiService = inject(ApiService);
   
   systemPrompt = signal<string>('You are a helpful AI assistant.');
   contextInfo = signal<string>('');
@@ -207,7 +209,7 @@ export class ChatComponent {
 
   async loadConversations() {
     try {
-      const conversations = await this.http.get<ConversationListItem[]>('http://localhost:5000/api/chat/conversations').toPromise();
+      const conversations = await this.http.get<ConversationListItem[]>(this.apiService.getApiUrl('/chat/conversations')).toPromise();
       this.conversations.set(conversations || []);
     } catch (error) {
       console.error('Error loading conversations:', error);
@@ -223,7 +225,7 @@ export class ChatComponent {
 
   async deleteConversation(conversationId: string) {
     try {
-      await this.http.delete(`http://localhost:5000/api/chat/conversation/${conversationId}`).toPromise();
+      await this.http.delete(this.apiService.getApiUrl(`/chat/conversation/${conversationId}`)).toPromise();
       await this.loadConversations();
       
       if (this.currentConversationId() === conversationId) {
@@ -302,7 +304,7 @@ export class ChatComponent {
       this.currentMessage.set('');
 
       const response = await this.http.post<InitializeChatResponse>(
-        'http://localhost:5000/api/chat/initialize',
+        this.apiService.getApiUrl('/chat/initialize'),
         formData
       ).toPromise();
 
@@ -343,7 +345,7 @@ export class ChatComponent {
     let fullContent = '';
 
     try {
-      const response = await fetch('http://localhost:5000/api/chat/message/stream', {
+      const response = await fetch(this.apiService.getApiUrl('/chat/message/stream'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -424,7 +426,7 @@ export class ChatComponent {
     let fullContent = '';
 
     try {
-      const response = await fetch('http://localhost:5000/api/chat/stream', {
+      const response = await fetch(this.apiService.getApiUrl('/chat/stream'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
